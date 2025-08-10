@@ -1,0 +1,76 @@
+{
+    "kpiData": {
+        "totalUsers": 5692,
+        "avgContent": 1.15,
+        "avgInteraction": 0.3,
+        "anomalyPercent": 17.1
+    },
+    "userClusterData": [
+        {
+            "name": 0,
+            "value": 4793
+        },
+        {
+            "name": 3,
+            "value": 501
+        },
+        {
+            "name": 1,
+            "value": 361
+        },
+        {
+            "name": 2,
+            "value": 37
+        }
+    ],
+    "clusterCount": 4,
+    "activityRate": 36,
+    "interactionRate": 47,
+    "retentionRate": 65,
+    "completionRate": 92,
+    "postingTimePreference": {
+        "morning": 0.4919184820801124,
+        "afternoon": 98.57374385101897,
+        "evening": 0.0,
+        "night": 0.9343376669009137
+    },
+    "postingTimePrefPercent": 98,
+    "interactionStabilityPercent": 72,
+    "viralCapabilityPercent": 7,
+    "userInteractionTrend": [
+        15,
+        18,
+        17,
+        17,
+        17,
+        15,
+        19,
+        19,
+        16,
+        16,
+        15,
+        15,
+        15,
+        17,
+        16,
+        12,
+        16,
+        12,
+        11,
+        11,
+        13,
+        13,
+        11,
+        10,
+        10,
+        14,
+        14,
+        14,
+        14
+    ],
+    "modelPerformance": {
+        "randomForest": 0.85,
+        "xgboost": 0.92
+    },
+    "lastUpdated": "2025-08-10 15:25:46"
+}

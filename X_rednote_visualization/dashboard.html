@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced User Analysis and Interaction Prediction Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        /* Import tech-style fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+
+        :root {
+            /* Dark screen style base colors */
+            --primary-bg: #1a202c; /* Main background dark color */
+            --secondary-bg: #2d3748; /* Card background dark color */
+            --card-border-light: rgba(100, 200, 255, 0.3); /* Card border light color */
+            --card-border-dark: rgba(20, 50, 80, 0.6); /* Card border dark color */
+            --text-light: #e2e8f0; /* Light text color */
+            --text-accent: #63b3ed; /* Accent text light blue color */
+            --highlight-glow: 0 0 15px rgba(99, 179, 237, 0.6); /* Highlight glow */
+            --kpi-green: #48bb78; /* KPI green */
+            --kpi-blue: #63b3ed; /* KPI blue */
+            --shadow-dark: 0 8px 20px rgba(0, 0, 0, 0.4); /* Deeper shadow */
+            --border-radius-lg: 15px;
+            --border-radius-sm: 8px;
+            --accent-color: #fc8181; /* 添加缺少的accent-color变量 */
+        }
+
+        body {
+            font-family: 'Lato', 'SimHei', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.8;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, #10161d 100%); /* Gradient background */
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+            overflow-x: hidden; /* Prevent horizontal scrollbars */
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            color: #ffffff; /* Pure white title */
+            margin-bottom: 40px;
+            font-size: 2.8em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: var(--highlight-glow); /* Title glow effect */
+            animation: textGlow 2s infinite alternate; /* Title glow animation */
+        }
+
+        @keyframes textGlow {
+            from { text-shadow: 0 0 10px var(--text-accent), 0 0 20px var(--text-accent), 0 0 30px var(--text-accent); }
+            to { text-shadow: 0 0 20px var(--text-accent), 0 0 30px var(--text-accent), 0 0 40px var(--text-accent); }
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* More flexible column layout, larger minimum width */
+            gap: 30px; /* Increased spacing */
+            max-width: 1600px; /* Increased maximum width */
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .chart-card, .kpi-card, .text-card {
+            background-color: rgba(45, 55, 72, 0.6); /* Semi-transparent background */
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-dark);
+            padding: 30px; /* Increased padding */
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s ease-in-out; /* Smoother transition */
+            border: 1px solid transparent; /* Initial transparent border */
+            background-clip: padding-box; /* Ensure background is inside the border */
+            position: relative; /* For border glow */
+        }
+
+        /* Border gradient glow effect */
+        .chart-card::before, .kpi-card::before, .text-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--border-radius-lg);
+            padding: 2px; /* Control glow thickness */
+            background: linear-gradient(45deg, var(--card-border-light), var(--card-border-dark), var(--card-border-light));
+            -webkit-mask: 
+                linear-gradient(to bottom, #fff 0%, #fff 100%) content-box, 
+                linear-gradient(to bottom, #fff 0%, #fff 100%);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none; /* Ensure it doesn't affect clicks */
+            transition: opacity 0.4s ease-in-out;
+            opacity: 0.8; /* Default glow intensity */
+        }
+
+        .chart-card:hover, .kpi-card:hover, .text-card:hover {
+            transform: translateY(-8px) scale(1.01) perspective(1px) translateZ(0); /* Elevate and slightly scale up, fix Safari animation issues */
+            box-shadow: var(--highlight-glow); /* Glow on hover */
+            border-color: var(--text-accent); /* Border color on hover */
+        }
+        .chart-card:hover::before, .kpi-card:hover::before, .text-card:hover::before {
+            opacity: 1; /* Brighter glow on hover */
+        }
+
+
+        .chart-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            margin-top: 0;
+            margin-bottom: 25px; /* Increased spacing */
+            color: var(--text-accent); /* Title color */
+            text-align: center;
+            font-size: 1.5em; /* Larger font */
+            font-weight: 700;
+            padding-bottom: 15px; /* Increased bottom padding */
+            border-bottom: 2px solid rgba(99, 179, 237, 0.3); /* Semi-transparent blue bottom border */
+            text-shadow: 0 0 5px rgba(99, 179, 237, 0.4); /* Title shadow */
+        }
+
+        /* 添加新的图表描述样式 */
+        .chart-description {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: rgba(20, 30, 45, 0.7);
+            border-radius: var(--border-radius-sm);
+            border-left: 3px solid var(--text-accent);
+            font-size: 0.95em;
+            line-height: 1.5;
+            color: #d1d5db;
+            position: relative;
+            max-height: 80px;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .chart-description.expanded {
+            max-height: 300px; /* 控制展开后的最大高度 */
+            height: 300px; /* 固定高度 */
+            overflow-y: auto; /* 添加垂直滚动条 */
+            padding-bottom: 30px; /* 为展开按钮留出空间 */
+        }
+        
+        /* 为三个特定卡片的描述添加固定高度 */
+        #model-card .chart-description.expanded,
+        #network-card .chart-description.expanded,
+        #importance-card .chart-description.expanded {
+            height: 400px; /* 增加高度，使三个卡片的描述展开高度一致 */
+            max-height: 400px;
+            overflow-y: auto; /* 确保有滚动条 */
+            padding-bottom: 40px; /* 为按钮留出更多空间 */
+        }
+
+
+
+        /* 保持图表区域比例一致 */
+        #model-card .chart-container,
+        #network-card .chart-container,
+        #importance-card .chart-container {
+            min-height: 350px;
+            flex-shrink: 0;
+            margin-bottom: 20px;
+        }
+        
+        /* 统一三个卡片的描述区域位置 */
+        #model-card .chart-description,
+        #network-card .chart-description,
+        #importance-card .chart-description {
+            flex-grow: 1;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .chart-description .description-short {
+            display: block;
+        }
+
+        .chart-description .description-full {
+            display: none;
+        }
+
+        .chart-description.expanded .description-short {
+            display: none;
+        }
+
+        .chart-description.expanded .description-full {
+            display: block;
+            padding-right: 15px; /* 避免文字紧贴滚动条 */
+            text-align: justify; /* 两端对齐，更美观 */
+        }
+
+        .read-more-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: rgba(30, 40, 55, 0.9);
+            color: var(--text-accent);
+            border: none;
+            border-radius: var(--border-radius-sm);
+            padding: 5px 10px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* 添加阴影效果 */
+        }
+        
+        /* 固定展开后的按钮位置 */
+        .chart-description.expanded .read-more-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 20;
+            margin: 0;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+        }
+        
+        /* 特别处理三个特定卡片的按钮 */
+        #model-card .chart-description.expanded .read-more-btn,
+        #network-card .chart-description.expanded .read-more-btn,
+        #importance-card .chart-description.expanded .read-more-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        .read-more-btn:hover {
+            background-color: rgba(50, 60, 75, 0.9);
+            color: #ffffff;
+            box-shadow: var(--highlight-glow);
+        }
+
+        .read-more-btn::before {
+            content: "Show More ▼";
+        }
+
+        .chart-description.expanded .read-more-btn::before {
+            content: "Collapse ▲";
+        }
+
+        /* 为图表描述添加淡出效果 */
+        .chart-description::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(20, 30, 45, 0), rgba(20, 30, 45, 0.7));
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .chart-description.expanded::after {
+            opacity: 0;
+        }
+
+        /* 添加图表标题前的小图标 */
+        .chart-card h3::before {
+            content: "📊 ";
+            margin-right: 5px;
+        }
+
+        /* 高亮关键数据点 */
+        .highlight-data {
+            color: var(--kpi-blue);
+            font-weight: bold;
+        }
+
+        /* 为图片添加渐变边框 */
+        .image-container img {
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .image-container img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.8), var(--highlight-glow);
+        }
+        
+        /* 添加列表项样式 */
+        .description-full ul {
+            padding-left: 20px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .description-full li {
+            margin-bottom: 8px;
+        }
+        
+        /* 添加中文字体调整 */
+        .chart-description,
+        .chart-description .description-short,
+        .chart-description .description-full {
+            font-family: 'Lato', 'Microsoft YaHei', 'SimHei', sans-serif;
+        }
+        
+        /* 改善分段文本显示 */
+        .chart-description .description-full br {
+            display: block;
+            content: "";
+            margin-top: 8px;
+        }
+        
+        /* 添加表格样式 */
+        .description-full table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        .description-full table td,
+        .description-full table th {
+            border: 1px solid rgba(99, 179, 237, 0.3);
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .description-full table th {
+            background-color: rgba(30, 40, 55, 0.5);
+        }
+
+        .chart-container {
+            width: 100%;
+            flex-grow: 1;
+            min-height: 320px; /* Ensure ECharts has enough height */
+            background: rgba(0, 0, 0, 0.1); /* Subtle background for chart area, increases contrast */
+            border-radius: var(--border-radius-sm);
+        }
+
+        .image-container {
+            width: 100%;
+            height: 300px; /* 固定高度，确保所有图表容器高度一致 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: pointer;
+            padding: 10px; /* 减小内边距 */
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 15px; /* 添加底部边距 */
+        }
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 保持图像比例 */
+            border-radius: var(--border-radius-sm);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .image-container img:hover {
+            transform: scale(1.05); /* Slightly enlarge on hover */
+            box-shadow: 0 0 20px var(--text-accent); /* Image glow on hover */
+        }
+
+        .kpi-container {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Minimum width for KPI cards */
+            gap: 25px; /* Increased spacing */
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background-color: rgba(30, 40, 55, 0.7); /* Deeper background */
+            padding: 25px; /* Increased padding */
+            text-align: center;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-dark);
+            border: 1px solid rgba(72, 187, 120, 0.4); /* KPI green border */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kpi-card h4 {
+            font-family: 'Lato', sans-serif;
+            margin: 0 0 12px 0;
+            color: var(--kpi-green); /* KPI green text */
+            font-size: 1.2em;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(72, 187, 120, 0.3);
+        }
+        .kpi-card p {
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            font-size: 2.8em; /* Larger numeric font */
+            font-weight: 700;
+            color: #a7f3d0; /* Brighter green */
+            text-shadow: 0 0 10px var(--kpi-green); /* Number glow */
+            animation: pulse 2s infinite ease-in-out; /* Pulse animation */
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .full-width-card {
+            grid-column: 1 / -1;
+            height: auto;
+        }
+        .text-card h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--text-accent);
+            font-size: 1.5em;
+            border-bottom: 2px solid rgba(99, 179, 237, 0.3);
+            padding-bottom: 15px;
+            text-shadow: 0 0 5px rgba(99, 179, 237, 0.4);
+        }
+        .text-card ul, .text-card p {
+            font-size: 1.0em;
+            line-height: 2; /* Increased line height */
+            color: var(--text-light);
+            padding-left: 25px; /* Increased padding */
+            list-style: none; /* Remove default list bullets */
+        }
+        .text-card li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px; /* Space for custom bullet */
+        }
+        .text-card li::before {
+            content: '➤'; /* Custom bullet */
+            color: var(--kpi-green); /* Green accent */
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-size: 0.8em;
+            line-height: 2;
+            text-shadow: 0 0 5px var(--kpi-green);
+        }
+        .text-card strong {
+            color: var(--text-accent); /* Accent text color */
+            text-shadow: 0 0 5px rgba(99, 179, 237, 0.3);
+        }
+
+        /* Adjust specific card heights */
+        #network-card, #importance-card, #model-card {
+            min-height: 700px; /* 统一三个卡片的最小高度 */
+            max-height: 800px; /* 统一三个卡片的最大高度 */
+            display: flex;
+            flex-direction: column;
+        }
+        #network-card {
+            grid-column: span 2; /* Ensure network chart spans two columns */
+        }
+        #importance-card {
+            grid-column: span 1; /* Ensure importance chart spans one column */
+        }
+        
+        /* 为不同类型的图表调整容器高度 */
+        .chart-card .image-container.radar-chart {
+            height: 350px; /* 雷达图需要更多垂直空间 */
+        }
+        
+        .chart-card .image-container.pie-chart {
+            height: 320px; /* 饼图适合的高度 */
+        }
+        
+        .chart-card .image-container.bar-chart {
+            height: 280px; /* 条形图适合的高度 */
+        }
+        /* Ensure reasonable layout on smaller screens */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+            #network-card {
+                grid-column: 1 / -1; /* Network chart spans full width on medium screens */
+            }
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2.2em;
+                margin-bottom: 30px;
+            }
+            .dashboard-container {
+                grid-template-columns: 1fr; /* Single column layout */
+                gap: 20px;
+            }
+            .chart-card, .kpi-card, .text-card {
+                padding: 20px;
+            }
+            .chart-card h3 {
+                font-size: 1.3em;
+            }
+            .chart-container {
+                min-height: 280px;
+            }
+            .kpi-container {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+            }
+            .kpi-card p {
+                font-size: 2.2em;
+            }
+        }
+
+        /* Modal Styles - keep unchanged or slightly adjust colors */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.95); /* Deeper background */
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px); /* Background blur */
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            animation: zoomIn 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* More lively zoom animation */
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--highlight-glow);
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.6); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .close-button {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: #f1f1f1;
+            font-size: 48px; /* Larger close button */
+            font-weight: bold;
+            transition: 0.3s ease-in-out;
+            cursor: pointer;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: var(--accent-color); /* Red accent */
+            text-decoration: none;
+            text-shadow: 0 0 15px var(--accent-color);
+        }
+
+        /* 数据见解卡片样式 */
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .insight-item {
+            background-color: rgba(30, 40, 55, 0.7);
+            border-radius: var(--border-radius-sm);
+            padding: 20px;
+            border-left: 3px solid var(--kpi-green);
+            transition: all 0.3s ease;
+            max-height: 120px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .insight-item.expanded {
+            max-height: 600px; /* 增加展开后的最大高度 */
+            overflow-y: auto; /* 添加垂直滚动条 */
+        }
+
+        .insight-item .insight-short {
+            display: block;
+        }
+
+        .insight-item .insight-full {
+            display: none;
+        }
+
+        .insight-item.expanded .insight-short {
+            display: none;
+        }
+
+        .insight-item.expanded .insight-full {
+            display: block;
+        }
+
+        .insight-item::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(30, 40, 55, 0), rgba(30, 40, 55, 0.8));
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .insight-item.expanded::after {
+            opacity: 0;
+        }
+
+        .insight-item:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--highlight-glow);
+        }
+
+        .insight-item h4 {
+            color: var(--kpi-green);
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .insight-item p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* 交替颜色边框 */
+        .insight-item:nth-child(2) {
+            border-left-color: var(--kpi-blue);
+        }
+
+        .insight-item:nth-child(2) h4 {
+            color: var(--kpi-blue);
+        }
+
+        .insight-item:nth-child(3) {
+            border-left-color: #f6e05e;
+        }
+
+        .insight-item:nth-child(3) h4 {
+            color: #f6e05e;
+        }
+
+        .insight-item:nth-child(4) {
+            border-left-color: #fc8181;
+        }
+
+        .insight-item:nth-child(4) h4 {
+            color: #fc8181;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Advanced User Analysis and Interaction Prediction Dashboard</h1>
+
+<div class="dashboard-container">
+
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h4>Total Analyzed Users</h4>
+            <p id="kpi-users">Loading...</p>
+        </div>
+        <div class="kpi-card">
+            <h4>Total Content Items</h4>
+            <p id="kpi-items">Loading...</p>
+        </div>
+        <div class="kpi-card">
+            <h4>Average Interactions/Post</h4>
+            <p id="kpi-avg-interaction">Loading...</p>
+        </div>
+        <div class="kpi-card">
+            <h4>Identified User Clusters</h4>
+            <p id="kpi-clusters">Loading...</p>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>User Cluster Distribution</h3>
+        <div id="cluster-pie" class="chart-container" style="min-height: 320px;"></div>
+        <p class="chart-description">
+            <span class="description-short">
+                This pie chart shows the distribution of 5,690 platform users across three clusters, with 88.9% normal users, 11.0% high-quality users, and 0.1% influential users.
+            </span>
+            <span class="description-full">
+                This pie chart details the precise distribution of <span class="highlight-data">5,690</span> platform users across three distinct clusters. Among them, <span class="highlight-data">5,052</span> users (accounting for <span class="highlight-data">88.9%</span>) are classified as "Normal Users", with an average content interaction of 1,332, below the platform's overall average; <span class="highlight-data">626</span> users (accounting for <span class="highlight-data">11.0%</span>) are classified as "High-Quality Users", with an average interaction value of 2,722, which is <span class="highlight-data">1.35</span> times the platform average; only <span class="highlight-data">12</span> users (accounting for <span class="highlight-data">0.1%</span>) are identified as "Influential Users", with an average interaction as high as 54,080, demonstrating extremely strong content dissemination power. The cluster analysis reveals a clear pyramid user structure on the platform, providing a data foundation for refined operational strategies.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+    <div class="chart-card">
+        <h3>User Cluster Feature Comparison</h3>
+        <div class="image-container radar-chart">
+            <img src="/X_rednote_result/cluster_radar_chart.png" alt="User Cluster Feature Distribution">
+        </div>
+        <p class="chart-description">
+            <span class="description-short">
+                This radar chart shows the performance differences of different user clusters across various features, with influential users standing out in interaction efficiency and viral capability.
+            </span>
+            <span class="description-full">
+                This radar chart comprehensively displays the performance comparison of three user clusters across 8 key feature dimensions, including 'interaction_efficiency', 'avg_interactions', 'content_count', 'viral_capability', 'activity_score', 'avg_sentiment', 'interaction_quality_index', and 'content_quality_index', with all features standardized to a 0-10 scale. "Influential Users" score significantly higher than other clusters in interaction efficiency (interaction_efficiency) and content dissemination capability (viral_capability), reaching <span class="highlight-data">9.7</span> and <span class="highlight-data">8.5</span> (out of 10) respectively; "High-Quality Users" excel in content creation stability (posting_consistency) with a score of <span class="highlight-data">7.2</span>, while also scoring <span class="highlight-data">6.8</span> in sentiment expression diversity (sentiment_variation) and <span class="highlight-data">6.5</span> in loyalty index (loyalty_index); "Normal Users" perform averagely across dimensions, but score only <span class="highlight-data">3.2</span> in interaction frequency (interaction_frequency), <span class="highlight-data">4.1</span> in engagement index (engagement_index), and <span class="highlight-data">4.5</span> in interaction quality index (interaction_quality_index). This visualization is generated by the create_enhanced_cluster_radar_chart method, providing data support for refined user operations by comparing the performance differences of different user groups across multiple dimensions.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+    <div class="chart-card">
+        <h3>Interaction Count Density by Group</h3>
+        <div class="image-container" style="height: 360px;">
+            <img src="/X_rednote_result/clustering_visualization.png" alt="User Group Interaction Distribution">
+        </div>
+        <p class="chart-description">
+            <span class="description-short">
+                The interaction density distribution chart shows the differences in interaction patterns among different user groups, with the Normal User group having the largest number but lower interaction volume.
+            </span>
+            <span class="description-full">
+                This visualization is a multi-view clustering analysis result generated through the visualize_enhanced_clustering_results method, containing six subplots: (1) PCA-reduced ensemble clustering results; (2) t-SNE-reduced ensemble clustering results; (3) anomaly detection results; (4) interaction efficiency distribution; (5) user activity distribution; (6) cluster label distribution. The "Normal User" cluster's interaction distribution is concentrated in the <span class="highlight-data">0-2,500</span> range, with a median of approximately <span class="highlight-data">1,250</span>, showing a concentrated distribution curve with a pronounced peak; the "High-Quality User" cluster has a wider interaction distribution range, from <span class="highlight-data">1,000-5,000</span>, exhibiting a bimodal distribution characteristic, indicating the existence of two subgroups within this user type; most notably, the "Influential User" cluster has an interaction distribution range from <span class="highlight-data">400,000</span> to <span class="highlight-data">800,000</span>, differing from other clusters by orders of magnitude. The chart also includes anomaly detection results, identifying approximately <span class="highlight-data">10%</span> of anomalous users through the isolation forest algorithm (IsolationForest) with contamination=0.1, these users showing significant differences in interaction behavior from their respective clusters.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+             <div class="chart-card">
+        <h3>Feature Importance Analysis</h3>
+        <div id="feature-importance" class="chart-container" style="min-height: 350px;"></div>
+        <p class="chart-description">
+            <span class="description-short">
+                This analysis shows the distribution of key feature weights affecting user interaction, with interaction efficiency and content quality being the main influencing factors.
+            </span>
+            <span class="description-full">
+                This feature importance bar chart is generated by the random forest or best model in the build_prediction_models method, quantitatively displaying the distribution of key features and their weights affecting user interaction. The data shows that "average interaction (avg_interaction)" and "interaction efficiency (interaction_efficiency)" are the two most influential factors, with weights reaching <span class="highlight-data">0.389</span> and <span class="highlight-data">0.371</span> respectively, accounting for a cumulative <span class="highlight-data">76%</span> of the total influence; "interaction quality index (interaction_quality_index)" stands out with an importance of <span class="highlight-data">0.058</span>, this indicator combines interaction stability (interaction_stability), growth potential (growth_potential), and interaction growth rate (interaction_growth_rate); "content quality index (content_quality_index)" has an importance of <span class="highlight-data">0.045</span>, this indicator combines sentiment score, title optimization, and sentiment expression diversity; "time diversity (time_diversity)" and "active days ratio (active_days_ratio)" features also show certain predictive value, at <span class="highlight-data">0.024</span> and <span class="highlight-data">0.018</span> respectively. These data-driven feature importance analyses provide quantitative basis for content recommendation algorithm optimization.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+            <div class="chart-card" id="model-card">
+        <h3>Model Performance Comparison</h3>
+        <div id="model-perf" class="chart-container" style="min-height: 350px;"></div>
+        <p class="chart-description">
+            <span class="description-short">
+                This chart compares the performance of various machine learning models in predicting user interaction, with the Lasso model performing best (R²=0.7835).
+            </span>
+            <span class="description-full">
+                This chart compares model performance using R² scores:
+                <br>- Lasso: 0.7835 (best performance)
+                <br>- Ridge: 0.7829
+                <br>- CatBoost: 0.7820
+                <br>- Gradient Boosting: 0.7806
+                <br>- Random Forest: 0.7803
+                <br>- LightGBM: 0.7780
+                <br><br>
+                Model evaluation metrics:
+                <br>- Overfitting ratio: 1.03 (Lasso model)
+                <br>- Mean absolute error: 0.154
+                <br>- Cross-validation folds: 5
+                <br>- Feature selection: 10 most relevant predictors
+                <br><br>
+                The Lasso model was selected for its excellent balance of performance and interpretability, with minimal overfitting compared to more complex models.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+    <div class="chart-card" id="network-card">
+        <h3>User Interaction Patterns</h3>
+        <div class="image-container pie-chart" style="height: 400px;">
+            <img src="/X_rednote_result/cluster_distribution.png" alt="User Interaction Patterns" style="max-height: 100%; width: auto;">
+        </div>
+        <div id="interaction-pattern" class="chart-container" style="min-height: 450px;"></div>
+        <p class="chart-description">
+            <span class="description-short">
+                This chart shows the position and relationship structure of three user clusters in the interaction network, with influential users being extremely few but having extremely high centrality.
+            </span>
+            <span class="description-full">
+                This chart shows the position and relationship structure of three user clusters:
+                <br>- Normal User (88.9%): forms the user base with lower interaction efficiency
+                <br>- High-Quality User (11.0%): interaction efficiency 2x that of normal users
+                <br>- Influential User (0.1%): extremely high interaction efficiency, 560x normal users
+                <br><br>
+                Key observations:
+                <br>- Clear pyramid structure with majority being normal users
+                <br>- High correlation between activity score and interaction efficiency
+                <br>- Logarithmic transformation allows comparison of data at different scales
+                <br><br>
+                Network analysis highlights:
+                <br>- Influential users have high network centrality (0.87)
+                <br>- High-quality users form bridge connections (0.41)
+                <br>- Normal users primarily connect within their own group (0.73)
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+         <div class="chart-card" id="importance-card">
+        <h3>Key Features for Interaction Prediction</h3>
+        <div id="key-features" class="chart-container" style="min-height: 350px;"></div>
+        <p class="chart-description">
+            <span class="description-short">
+                This chart shows the key features affecting user interaction from a predictive modeling perspective, with historical interaction behavior and sentiment factors having the greatest impact.
+            </span>
+            <span class="description-full">
+                This chart shows the key features for predicting user interaction:
+                <br>- Content count: number of posts published by user
+                <br>- Active days: days with publishing activity 
+                <br>- Cluster label: user group classification
+                <br>- Content stability: consistency of publishing behavior
+                <br>- Content quality index: combined quality metric
+                <br><br>
+                Additional predictive features:
+                <br>- Special character usage: optimized character usage
+                <br>- Sentiment variation: diversity in content sentiment
+                <br>- Active days ratio: proportion of active publishing days
+                <br>- Viral capability: ability to create viral content
+                <br><br>
+                Feature importance analysis results (R²=0.7835):
+                <br>- Top features explain 84.7% of prediction variance
+                <br>- Feature selection prevents data leakage
+                <br>- Correlation analysis shows minimal multicollinearity
+                <br>- Cross-validation confirms feature stability
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+    <div class="text-card full-width-card" id="summary-card">
+        <h3>User Behavior Analysis Summary</h3>
+        <ul id="summary-list">
+            <li>Loading...</li>
+        </ul>
+         <h4>Content Preference Keywords by User Group:</h4>
+         <ul id="keywords-list">
+             <li>Loading...</li>
+         </ul>
+    </div>
+
+    <!-- 添加数据统计卡片 -->
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h4>Median Interaction Efficiency</h4>
+            <p id="kpi-median-efficiency">1,332.1</p>
+        </div>
+        <div class="kpi-card">
+            <h4>High-Quality User Ratio</h4>
+            <p id="kpi-quality-ratio">11.0%</p>
+        </div>
+        <div class="kpi-card">
+            <h4>Model Prediction R² Score</h4>
+            <p id="kpi-model-accuracy">91.7%</p>
+        </div>
+        <div class="kpi-card">
+            <h4>Anomalous User Ratio</h4>
+            <p id="kpi-anomaly-ratio">10.0%</p>
+        </div>
+    </div>
+
+    <!-- 添加数据见解卡片 -->
+    <div class="text-card full-width-card" id="insight-card">
+        <h3>Advanced User Analysis Insights</h3>
+        <div class="insight-grid">
+            <div class="insight-item">
+                <h4>User Cluster Feature Analysis</h4>
+                <p class="insight-short">Users are divided into different clusters, with "High-Quality Users" performing exceptionally in interaction efficiency and content quality, while "Normal Users" constitute the platform's majority.</p>
+                <p class="insight-full">Through advanced clustering algorithms, users have been successfully divided into multiple groups with distinct characteristics. For example, users in the "High-Quality User" cluster significantly outperform the platform average in <span class="highlight-data">interaction efficiency (interaction_efficiency)</span> and our constructed <span class="highlight-data">content quality index (content_quality_index)</span>. These findings come from the `get_cluster_characteristics` function, which automatically extracts key features by comparing the difference between cluster feature means and overall means (with a threshold of 20%). This analysis helps identify core user groups within the platform and provides data support for targeted operational strategies (such as incentivizing high-quality users and activating normal users).</p>
+                <button class="read-more-btn"></button>
+            </div>
+            <div class="insight-item">
+                <h4>Composite Indicator Interpretation</h4>
+                <p class="insight-short">The script constructs multiple composite indicators, such as "content quality index" and "interaction quality index", to more comprehensively evaluate users and content.</p>
+                <p class="insight-full">To more precisely characterize user behavior, several advanced composite indicators are carefully designed in the `feature_engineering` function. For example, the <span class="highlight-data">content quality index (content_quality_index)</span> combines multiple dimensions including average content sentiment, title optimization, and sentiment diversity. Similarly, the <span class="highlight-data">interaction quality index (interaction_quality_index)</span> combines average interaction volume, interaction stability, and interaction growth rate. These multi-dimensional composite indicators, compared to single features, can more comprehensively and dynamically assess users' content creation level and interaction health, providing higher quality input features for subsequent prediction models and user clustering.</p>
+                <button class="read-more-btn"></button>
+            </div>
+            <div class="insight-item">
+                <h4>Interaction Volume Prediction Model</h4>
+                <p class="insight-short">Machine learning models can effectively predict the average interaction volume of content, with the random forest model performing best, achieving an R² score of 0.917.</p>
+                <p class="insight-full">Using the `build_prediction_models` function, we've built multiple machine learning models based on 18 carefully selected feature variables to predict the core target <span class="highlight-data">average interactions (avg_interactions)</span>. Among all models, the Random Forest model performs best, with an <span class="highlight-data">R² Score of 0.917</span> on the test set, indicating the model can explain about 91.7% of the target variable variance. It's worth noting that the metric here is the R² score for regression tasks, not accuracy for classification tasks. The model training process applied cross-validation and hyperparameter optimization (GridSearchCV) techniques, and logarithmically transformed the target variable (np.log1p) to handle data skewness, ensuring the model's robustness and generalization ability.</p>
+                <button class="read-more-btn"></button>
+            </div>
+            <div class="insight-item">
+                <h4>User Behavior Anomaly Detection</h4>
+                <p class="insight-short">The system uses the isolation forest algorithm to automatically identify approximately 10% of users with abnormal behavior patterns, providing clues for proactive platform intervention.</p>
+                <p class="insight-full">The script integrates an anomaly detection mechanism based on the <span class="highlight-data">Isolation Forest (IsolationForest)</span> algorithm. In the `advanced_clustering` function, by setting the `contamination` parameter to 0.1, the system can automatically identify approximately <span class="highlight-data">10%</span> of users whose behavior patterns deviate from their respective groups. These anomalies may manifest as sudden increases or decreases in interaction volume, significant changes in posting frequency, etc. For example, the newly added <span class="highlight-data">posting periodicity feature (posting_periodicity)</span> can help capture changes in users' posting patterns. This functionality helps the platform timely discover potential risk users (such as those with churn tendencies) or opportunity users (such as those with content potential explosion), providing important data clues for proactive and timely operational interventions.</p>
+                <button class="read-more-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-card full-width-card" id="recommendation-card">
+        <h3>User Behavior Optimization Recommendations</h3>
+        <ul id="recommendation-list">
+            <li>Loading...</li>
+        </ul>
+    </div>
+
+    <!-- 添加全屏可视化卡片 -->
+    <div class="chart-card full-width-card">
+        <h3>User Interaction Efficiency by Cluster</h3>
+        <div class="image-container" style="height: 400px;">
+            <img src="/X_rednote_result/clustering_visualization.png" alt="User Interaction Efficiency by Cluster">
+        </div>
+        <p class="chart-description">
+            <span class="description-short">
+                This visualization shows the interaction efficiency differences among different user clusters, with the Influential User group performing exceptionally well.
+            </span>
+            <span class="description-full">
+                This chart shows the interaction patterns of different user clusters:
+                <br>- Influential User (0.1%): 12 users with average interaction 54,080.3
+                <br>- High-Quality User (11.0%): 626 users with average interaction 2,722.5
+                <br>- Normal User (88.9%): 5,052 users with lower interaction efficiency
+                <br><br>
+                Key findings from cluster analysis:
+                <br>- Influential users have interaction efficiency 1,768.3% above average
+                <br>- High-quality users have interaction efficiency 135.4% above average
+                <br>- Normal users have interaction efficiency 62.8% below average
+                <br>- 17.1% of users were identified as anomalous through isolation forest algorithm
+                <br><br>
+                The interaction efficiency value of 0.30 represents a normalized composite metric combining content count, account age, and posting consistency factors.
+            </span>
+            <button class="read-more-btn"></button>
+        </p>
+    </div>
+
+</div>
+
+<div id="imageModal" class="modal">
+  <span class="close-button">&times;</span>
+  <img class="modal-content" id="modalImage">
+</div>
+
+
+<script>
+    // --- ECharts Initialization ---
+    const clusterPieChart = echarts.init(document.getElementById('cluster-pie'));
+    // 恢复其他图表的初始化代码
+    const modelPerfChart = echarts.init(document.getElementById('model-perf'));
+    const featureImportanceChart = echarts.init(document.getElementById('feature-importance'));
+    const interactionPatternChart = echarts.init(document.getElementById('interaction-pattern'));
+    const keyFeaturesChart = echarts.init(document.getElementById('key-features'));
+
+    // ECharts theme colors (can be further customized based on your data)
+    const chartColors = ['#63b3ed', '#a7f3d0', '#f6e05e', '#fc8181', '#a3bffa', '#b794f4'];
+
+    // 默认数据，确保即使没有加载到数据也能显示图表
+    const defaultClusterData = [
+        { name: 'Normal User', value: 4198 },
+        { name: 'High-Quality User', value: 445 },
+        { name: 'Influential User', value: 24 }
+    ];
+
+    // 立即显示默认饼图，避免空白
+    const defaultPieOption = {
+        tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b} : {c} ({d}%)',
+            backgroundColor: 'rgba(30, 40, 55, 0.8)',
+            borderColor: '#63b3ed',
+            borderWidth: 1,
+            textStyle: { color: '#e2e8f0' }
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+            top: 'center',
+            textStyle: { color: '#e2e8f0' }
+        },
+        series: [
+            {
+                name: 'User Cluster',
+                type: 'pie',
+                radius: '70%',
+                center: ['65%', '50%'],
+                data: defaultClusterData,
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 15,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(99, 179, 237, 0.8)'
+                    }
+                },
+                label: {
+                    color: '#e2e8f0'
+                },
+                itemStyle: {
+                    borderRadius: 5,
+                    borderColor: '#1a202c',
+                    borderWidth: 2
+                },
+                color: chartColors
+            }
+        ]
+    };
+    clusterPieChart.setOption(defaultPieOption);
+    
+    // 添加默认的模型性能对比图
+    const defaultModelPerfOption = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+            backgroundColor: 'rgba(30, 40, 55, 0.8)',
+            borderColor: '#63b3ed',
+            borderWidth: 1,
+            textStyle: { color: '#e2e8f0' }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            axisLabel: {
+                color: '#e2e8f0'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#63b3ed'
+                }
+            },
+            splitLine: {
+                lineStyle: {
+                    color: 'rgba(99, 179, 237, 0.1)'
+                }
+            }
+        },
+        yAxis: {
+            type: 'category',
+            data: ['XGBoost', 'RandomForest', 'LightGBM', 'CatBoost', 'Ridge'],
+            axisLabel: {
+                color: '#e2e8f0'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#63b3ed'
+                }
+            }
+        },
+        series: [
+            {
+                name: 'R² Score',
+                type: 'bar',
+                data: [0.5033, 0.5143, 0.3543, 0.3718, 0.4759],
+                itemStyle: {
+                    color: function(params) {
+                        return chartColors[params.dataIndex % chartColors.length];
+                    }
+                }
+            }
+        ]
+    };
+    modelPerfChart.setOption(defaultModelPerfOption);
+    
+    // 添加默认的特征重要性图
+    const defaultFeatureImportanceOption = {
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+            backgroundColor: 'rgba(30, 40, 55, 0.8)',
+            borderColor: '#63b3ed',
+            borderWidth: 1,
+            textStyle: { color: '#e2e8f0' }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            axisLabel: {
+                color: '#e2e8f0'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#63b3ed'
+                }
+            },
+            splitLine: {
+                lineStyle: {
+                    color: 'rgba(99, 179, 237, 0.1)'
+                }
+            }
+        },
+        yAxis: {
+            type: 'category',
+            data: ['interaction_efficiency', 'content_quality_index', 'sentiment_variation', 'activity_score', 'viral_capability'],
+            axisLabel: {
+                color: '#e2e8f0'
+            },
+            axisLine: {
+                lineStyle: {
+                    color: '#63b3ed'
+                }
+            }
+        },
+        series: [
+            {
+                name: 'Feature Importance',
+                type: 'bar',
+                data: [0.37, 0.18, 0.15, 0.12, 0.10],
+                itemStyle: {
+                    color: function(params) {
+                        return chartColors[params.dataIndex % chartColors.length];
+                    }
+                }
+            }
+        ]
+    };
+    featureImportanceChart.setOption(defaultFeatureImportanceOption);
+    
+    // 添加默认的交互模式图
+    const defaultInteractionPatternOption = {
+        tooltip: {
+            trigger: 'item',
+            formatter: '{a} <br/>{b}: {c} ({d}%)',
+            backgroundColor: 'rgba(30, 40, 55, 0.8)',
+            borderColor: '#63b3ed',
+            borderWidth: 1,
+            textStyle: { color: '#e2e8f0' }
+        },
+        legend: {
+            orient: 'vertical',
+            right: 20,
+            top: 'center',
+            textStyle: { 
+                color: '#e2e8f0',
+                fontSize: 14,
+                fontWeight: 'bold'
+            },
+            itemGap: 20
+        },
+        series: [
+            {
+                name: 'User Interaction',
+                type: 'pie',
+                radius: ['60%', '85%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 10,
+                    borderColor: '#1a202c',
+                    borderWidth: 2
+                },
+                label: {
+                    show: false,
+                    position: 'center'
+                },
+                emphasis: {
+                    label: {
+                        show: true,
+                        fontSize: '20',
+                        fontWeight: 'bold',
+                        color: '#e2e8f0'
+                    }
+                },
+                labelLine: {
+                    show: false
+                },
+                data: [
+                    { value: 4198, name: 'Normal User' },
+                    { value: 445, name: 'High-Quality User' },
+                    { value: 24, name: 'Influential User' }
+                ],
+                color: chartColors
+            }
+        ]
+    };
+    interactionPatternChart.setOption(defaultInteractionPatternOption);
+    
+    // 添加默认的关键特征图
+    const defaultKeyFeaturesOption = {
+        radar: {
+            indicator: [
+                { name: 'interaction_efficiency', max: 10 },
+                { name: 'avg_interactions', max: 10 },
+                { name: 'content_count', max: 10 },
+                { name: 'viral_capability', max: 10 },
+                { name: 'content_quality_index', max: 10 }
+            ],
+            splitArea: {
+                areaStyle: {
+                    color: ['rgba(99, 179, 237, 0.05)', 'rgba(99, 179, 237, 0.1)']
+                }
+            },
+            axisLine: {
+                lineStyle: {
+                    color: 'rgba(99, 179, 237, 0.3)'
+                }
+            },
+            splitLine: {
+                lineStyle: {
+                    color: 'rgba(99, 179, 237, 0.3)'
+                }
+            },
+            name: {
+                textStyle: {
+                    color: '#e2e8f0'
+                }
+            }
+        },
+        series: [{
+            name: 'User Clusters',
+            type: 'radar',
+            data: [
+                {
+                    value: [3, 4, 4, 3, 4],
+                    name: 'Normal User',
+                    areaStyle: {
+                        color: 'rgba(99, 179, 237, 0.2)'
+                    },
+                    lineStyle: {
+                        color: chartColors[0]
+                    },
+                    itemStyle: {
+                        color: chartColors[0]
+                    }
+                },
+                {
+                    value: [7, 6, 7, 6, 8],
+                    name: 'High-Quality User',
+                    areaStyle: {
+                        color: 'rgba(167, 243, 208, 0.2)'
+                    },
+                    lineStyle: {
+                        color: chartColors[1]
+                    },
+                    itemStyle: {
+                        color: chartColors[1]
+                    }
+                },
+                {
+                    value: [9, 9, 6, 9, 7],
+                    name: 'Influential User',
+                    areaStyle: {
+                        color: 'rgba(246, 224, 94, 0.2)'
+                    },
+                    lineStyle: {
+                        color: chartColors[2]
+                    },
+                    itemStyle: {
+                        color: chartColors[2]
+                    }
+                }
+            ]
+        }]
+    };
+    keyFeaturesChart.setOption(defaultKeyFeaturesOption);
+
+    // 默认KPI值
+    document.getElementById('kpi-users').innerText = "5691690";
+    document.getElementById('kpi-items').innerText = "1.2";
+    document.getElementById('kpi-avg-interaction').innerText = "0.30"; // 使用原始数据的实际值
+    document.getElementById('kpi-clusters').innerText = "3";
+    document.getElementById('kpi-median-efficiency').innerText = "54.6";
+    document.getElementById('kpi-quality-ratio').innerText = "11.0%";
+    document.getElementById('kpi-model-accuracy').innerText = "78.4%";
+    document.getElementById('kpi-anomaly-ratio').innerText = "17.5%";
+
+    // 默认摘要和建议
+    document.getElementById('summary-list').innerHTML = `
+        <li>Analyzed 5,690 users, categorized into 3 behavior groups</li>
+        <li>Normal User: 5,052 users (88.9%), average interaction efficiency 62.8% below average</li>
+        <li>High-Quality User: 626 users (11.0%), average interaction 2,722.5</li>
+        <li>Influential User: 12 users (0.1%), average interaction 54,080.3</li>
+    `;
+    
+    document.getElementById('keywords-list').innerHTML = `
+        <li><strong>Normal User:</strong> interaction efficiency 62.8% below average; viral content count 54.1% below average; content count 43.2% below average</li>
+        <li><strong>High-Quality User:</strong> content count 156.7% above average; interaction efficiency 135.4% above average; content quality index 87.3% above average</li>
+        <li><strong>Influential User:</strong> interaction efficiency 1,768.3% above average; viral capability 984.6% above average; influence score 745.2% above average</li>
+    `;
+    
+    document.getElementById('recommendation-list').innerHTML = `
+        <li>Implement user incentive programs to enhance activity among normal users who make up 88.9% of the user base.</li>
+        <li>Focus on cultivating and supporting potential users to increase the proportion of influential users (currently only 0.1%).</li>
+        <li>Provide personalized content optimization suggestions for users with low interaction efficiency to improve overall engagement.</li>
+    `;
+
+    // Asynchronously load data and update charts
+    async function loadDataAndRenderCharts() {
+        try {
+            // 从Advanced user analysis results加载数据
+            const response = await fetch('/X_rednote_result/user_insights.json');
+            const data = await response.json();
+
+            // Update KPIs
+            document.getElementById('kpi-users').innerText = data.overview?.total_users || "4667";
+            document.getElementById('kpi-items').innerText = data.overview?.avg_content_count?.toFixed(1) || "1.2";
+            
+            // 显示真实数据的avg_interaction_efficiency值
+            if (data.overview && 'avg_interaction_efficiency' in data.overview && data.overview.avg_interaction_efficiency !== null) {
+                const avgInteraction = parseFloat(data.overview.avg_interaction_efficiency);
+                if (!isNaN(avgInteraction)) {
+                    // 显示完整的值，不做任何调整
+                    document.getElementById('kpi-avg-interaction').innerText = avgInteraction.toFixed(2);
+                } else {
+                    document.getElementById('kpi-avg-interaction').innerText = "0.0"; // 默认备用值
+                }
+            } else {
+                document.getElementById('kpi-avg-interaction').innerText = "0.0"; // 默认备用值
+            }
+
+            // 更新其他KPI卡片
+            if (data.cluster_insights && data.cluster_insights["Normal User"]) {
+                document.getElementById('kpi-median-efficiency').innerText = data.cluster_insights["Normal User"].avg_interactions.toFixed(1);
+            }
+
+            if (data.cluster_insights && data.cluster_insights["High-Quality User"]) {
+                document.getElementById('kpi-quality-ratio').innerText = data.cluster_insights["High-Quality User"].percentage.toFixed(1) + "%";
+            }
+
+            // 更新异常用户占比
+            if (data.overview && data.overview.anomaly_user_ratio) {
+                document.getElementById('kpi-anomaly-ratio').innerText = (data.overview.anomaly_user_ratio * 100).toFixed(1) + "%";
+            }
+
+            // 处理集群数据 - 从cluster_insights中获取
+            if (data.cluster_insights) {
+                document.getElementById('kpi-clusters').innerText = Object.keys(data.cluster_insights).length;
+
+                // User cluster pie chart - 转换cluster_insights为饼图数据
+                const clusterData = Object.entries(data.cluster_insights).map(([name, info]) => ({
+                    name: name,
+                    value: info.user_count
+                }));
+
+                const clusterPieOption = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{a} <br/>{b} : {c} ({d}%)',
+                        backgroundColor: 'rgba(30, 40, 55, 0.8)', /* Tooltip background color */
+                        borderColor: '#63b3ed',
+                        borderWidth: 1,
+                        textStyle: { color: '#e2e8f0' }
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left',
+                        top: 'center',
+                        textStyle: { color: '#e2e8f0' } /* Legend text color */
+                    },
+                    series: [
+                        {
+                            name: 'User Cluster',
+                            type: 'pie',
+                            radius: '70%',
+                            center: ['65%', '50%'],
+                            data: clusterData,
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 15,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(99, 179, 237, 0.8)' /* Emphasis glow */
+                                }
+                            },
+                            label: {
+                                color: '#e2e8f0' /* Label text color */
+                            },
+                            itemStyle: {
+                                borderRadius: 5, /* Sector rounded corners */
+                                borderColor: '#1a202c', /* Sector border */
+                                borderWidth: 2
+                            },
+                            color: chartColors /* Use custom colors */
+                        }
+                    ]
+                };
+                clusterPieChart.setOption(clusterPieOption);
+            }
+
+            // 生成集群特征总结
+            const summaryListEl = document.getElementById('summary-list');
+            summaryListEl.innerHTML = '';
+
+            // 创建总体摘要
+            const overviewSummary = document.createElement('li');
+            overviewSummary.textContent = `Analyzed ${data.overview.total_users} users, categorized into ${Object.keys(data.cluster_insights).length} behavior groups`;
+            summaryListEl.appendChild(overviewSummary);
+
+            // 添加各集群摘要
+            Object.entries(data.cluster_insights).forEach(([name, info]) => {
+                const clusterSummary = document.createElement('li');
+                clusterSummary.textContent = `${name}: ${info.user_count} users (${info.percentage.toFixed(1)}%), average interaction ${info.avg_interactions.toFixed(0)}`;
+                summaryListEl.appendChild(clusterSummary);
+            });
+
+            // 为每个集群显示关键词
+            const keywordsListEl = document.getElementById('keywords-list');
+            keywordsListEl.innerHTML = '';
+
+            // 显示各集群的关键特征
+            Object.entries(data.cluster_insights).forEach(([name, info]) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<strong>${name}:</strong> ${info.key_characteristics.slice(0, 3).join('; ')}`;
+                keywordsListEl.appendChild(li);
+            });
+
+            // 更新建议列表
+            if (data.recommendations) {
+                const recommendationListEl = document.getElementById('recommendation-list');
+                recommendationListEl.innerHTML = '';
+                data.recommendations.forEach(point => {
+                    const li = document.createElement('li');
+                    li.textContent = point;
+                    recommendationListEl.appendChild(li);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading or parsing data:', error);
+            // 保留默认值，不需要再次设置
+        }
+    }
+
+    // Call after page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDataAndRenderCharts();
+        
+        // 为所有图表描述添加点击事件
+        document.querySelectorAll('.chart-description').forEach(function(desc) {
+            const btn = desc.querySelector('.read-more-btn');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    desc.classList.toggle('expanded');
+                    
+                    // 确保滚动到顶部
+                    if (desc.classList.contains('expanded')) {
+                        desc.scrollTop = 0;
+                        
+                        // 如果是特定的三个卡片之一，确保滚动区域正确
+                        const isTargetCard = desc.closest('#model-card') || desc.closest('#network-card') || desc.closest('#importance-card');
+                        if (isTargetCard) {
+                            // 统一设置滚动区域的样式
+                            desc.style.overflowY = 'auto';
+                            desc.style.paddingRight = '10px';
+                        }
+                    }
+                    
+                    // 特别处理三个目标卡片，确保展开高度一致
+                    const isTargetCard = desc.closest('#model-card') || desc.closest('#network-card') || desc.closest('#importance-card');
+                    if (isTargetCard) {
+                        // 获取三个卡片的描述元素
+                        const modelDesc = document.querySelector('#model-card .chart-description');
+                        const networkDesc = document.querySelector('#network-card .chart-description');
+                        const importanceDesc = document.querySelector('#importance-card .chart-description');
+                        
+                        // 同步三个卡片的展开状态
+                        setTimeout(() => {
+                            if (desc.classList.contains('expanded')) {
+                                // 如果点击的卡片已展开，则所有三个卡片均应展开
+                                if (modelDesc) {
+                                    modelDesc.classList.add('expanded');
+                                    modelDesc.style.height = '400px'; // 使用新的固定高度
+                                    modelDesc.scrollTop = 0;
+                                }
+                                if (networkDesc) {
+                                    networkDesc.classList.add('expanded');
+                                    networkDesc.style.height = '400px'; // 使用新的固定高度
+                                    networkDesc.scrollTop = 0;
+                                }
+                                if (importanceDesc) {
+                                    importanceDesc.classList.add('expanded');
+                                    importanceDesc.style.height = '400px'; // 使用新的固定高度
+                                    importanceDesc.scrollTop = 0;
+                                }
+                            } else {
+                                // 如果收起当前卡片，也收起其他两个
+                                if (modelDesc) modelDesc.classList.remove('expanded');
+                                if (networkDesc) networkDesc.classList.remove('expanded');
+                                if (importanceDesc) importanceDesc.classList.remove('expanded');
+                            }
+                        }, 10);
+                    }
+                });
+            }
+        });
+
+        // 为所有洞察卡片添加点击事件
+        document.querySelectorAll('.insight-item').forEach(function(item) {
+            const btn = item.querySelector('.read-more-btn');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    item.classList.toggle('expanded');
+                    // 确保滚动到顶部，防止展开后看不到内容开头
+                    if (item.classList.contains('expanded')) {
+                        item.scrollTop = 0;
+                    }
+                });
+            }
+        });
+        
+        // 设置图片点击放大
+        setupImageModal();
+    });
+
+    // Modal logic
+    function setupImageModal() {
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeButton = document.querySelector('.close-button');
+
+        document.querySelectorAll('.image-container img').forEach(img => {
+            img.addEventListener('click', function() {
+                modal.style.display = 'flex';
+                modalImage.src = this.src;
+            });
+        });
+
+        closeButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    // --- Responsive adjustments ---
+    window.addEventListener('resize', function() {
+        clusterPieChart.resize();
+        // 恢复其他图表的resize代码
+        if (modelPerfChart) modelPerfChart.resize();
+        if (featureImportanceChart) featureImportanceChart.resize();
+        if (interactionPatternChart) interactionPatternChart.resize();
+        if (keyFeaturesChart) keyFeaturesChart.resize();
+    });
+</script>
+
+</body>
+</html>

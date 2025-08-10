@@ -1,0 +1,5 @@
+{
+  "bootstrap_servers": "localhost:9092",
+  "topic": "raw_data",
+  "group_id": "xiaohongshu_data_group"
+} 
